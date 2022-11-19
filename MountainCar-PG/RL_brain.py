@@ -41,11 +41,8 @@ class PolicyGradient(object):
         self.n_features = n_features
         self.lr = learning_rate
         self.gamma = reward_decay
-
         self.ep_obs, self.ep_as, self.ep_rs = [], [], []
-
         self.policy_net = self._build_net()
-
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=self.lr)
 
     def _build_net(self):
@@ -53,14 +50,10 @@ class PolicyGradient(object):
         return model
 
     def choose_action(self, observation):
-        # observation = env.reset()
-        # action = RL.choose_action(observation)
-        # print("observation:{}".format(observation[0]))
-        state = torch.from_numpy(observation).float()
+        state = torch.from_numpy(observation[np.newaxis, :]).float()
         probs = self.policy_net(state)
-        prob_weights = F.softmax(probs, dim=0).detach().numpy()
-        action = np.random.choice(range(prob_weights.shape[0]), p=prob_weights.ravel())
-        # print(action)
+        prob_weights = F.softmax(probs, dim=1).detach().numpy()
+        action = np.random.choice(range(prob_weights.shape[1]), p=prob_weights.ravel())
         return action
 
     def store_transition(self, s, a, r):
@@ -76,15 +69,13 @@ class PolicyGradient(object):
         self.optimizer.zero_grad()
 
         # train on episode
-        for i in range(len(self.ep_obs)):
-            state = torch.FloatTensor(self.ep_obs[i])
-            action = torch.FloatTensor(self.ep_as[i])
+        for i in range(len(self.ep_as)):
+            criteria = nn.CrossEntropyLoss()
+            state = torch.from_numpy(self.ep_obs[i][np.newaxis, :]).float()
+            action = torch.tensor([self.ep_as[i]], dtype = torch.long)
             reward = self.ep_rs[i]
             probs = self.policy_net(state)
-            prob_weights = F.softmax(probs, dim=0).detach().numpy()
-            m = torch.FloatTensor(np.random.choice(range(prob_weights.shape[0]), p=prob_weights.ravel()))
-            print(m, action)
-            loss = -torch.nn.CrossEntropyLoss(m, action) * discounted_ep_rs_norm[i]
+            loss = 1.* criteria(probs, action) * discounted_ep_rs_norm[i]
             loss.backward()
 
         self.optimizer.step()
