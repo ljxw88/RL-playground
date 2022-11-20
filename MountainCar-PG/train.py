@@ -45,18 +45,6 @@ for i_episode in range(1000):
 
         RL.store_transition(observation, action, reward)
 
-        if RENDER:
-            plt.figure()
-            plt.clf()
-            plt.title('Example extracted screen')
-            current_screen = env.render()
-            plt.pause(1e-5)
-            ipythondisplay.clear_output(wait=True)
-            ipythondisplay.display(plt.gcf())
-            plt.title('Action: {}'.format(action))
-            plt.imshow(current_screen, interpolation='none')
-            plt.show()
-
         if done:
             # calculate running reward
             ep_rs_sum = sum(RL.ep_rs)
@@ -70,11 +58,11 @@ for i_episode in range(1000):
 
             vt = RL.learn()  # train
 
-            if i_episode == 30:
-                plt.plot(vt)  # plot the episode vt
-                plt.xlabel('episode steps')
-                plt.ylabel('normalized state-action value')
-                plt.show()
+            # if i_episode == 30:
+            #     plt.plot(vt)  # plot the episode vt
+            #     plt.xlabel('episode steps')
+            #     plt.ylabel('normalized state-action value')
+            #     plt.show()
 
             break
 

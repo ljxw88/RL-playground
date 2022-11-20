@@ -52,6 +52,7 @@ class PolicyGradient(object):
         return model
 
     def choose_action(self, observation):
+        self.policy_net.eval()
         state = torch.from_numpy(observation[np.newaxis, :]).float()
         probs = self.policy_net(state)
         prob_weights = F.softmax(probs, dim=1).detach().cpu().numpy()
@@ -64,13 +65,14 @@ class PolicyGradient(object):
         self.ep_rs.append(r)
 
     def learn(self):
+        self.policy_net.train()
         # discount and normalize episode reward
         discounted_ep_rs_norm = self._discount_and_norm_rewards()
 
         # gradient descent 
         self.optimizer.zero_grad()
-
-        criteria = nn.NLLLoss()
+        
+        criteria = nn.CrossEntropyLoss()
         observation_array = np.array(self.ep_obs)
         state = torch.FloatTensor(observation_array)
         action = torch.tensor([self.ep_as], dtype = torch.long).T.squeeze(1)
