@@ -3,8 +3,11 @@ import torch
 from RL_brain import PolicyGradient
 import matplotlib.pyplot as plt
 import numpy as np
+from IPython.display import HTML
+from IPython import display as ipythondisplay
+import random
 
-DISPLAY_REWARD_THRESHOLD = -2000  # renders environment if total episode reward is greater then this threshold
+DISPLAY_REWARD_THRESHOLD = -2000  # renders environment if total episode reward is greater than this threshold
 # episode: 154   reward: -10667
 # episode: 387   reward: -2009
 # episode: 489   reward: -1006
@@ -12,9 +15,11 @@ DISPLAY_REWARD_THRESHOLD = -2000  # renders environment if total episode reward 
 
 RENDER = False  # rendering wastes time
 
-env = gym.make('MountainCar-v0')
+env = gym.make('MountainCar-v0', render_mode='rgb_array')
 # env.seed(1)     # reproducible, general Policy gradient has high variance
+env.action_space.seed(42)
 np.random.seed(1)
+torch.manual_seed(1)
 env = env.unwrapped
 
 print(env.action_space)
@@ -31,17 +36,26 @@ RL = PolicyGradient(
 )
 
 for i_episode in range(1000):
-
     observation, info = env.reset()
+    env.render()
 
     while True:
-        if RENDER: env.render()
-
         action = RL.choose_action(observation)
-
         observation_, reward, done, _, info = env.step(action)     # reward = -1 in all cases
 
         RL.store_transition(observation, action, reward)
+
+        if RENDER:
+            plt.figure()
+            plt.clf()
+            plt.title('Example extracted screen')
+            current_screen = env.render()
+            plt.pause(1e-5)
+            ipythondisplay.clear_output(wait=True)
+            ipythondisplay.display(plt.gcf())
+            plt.title('Action: {}'.format(action))
+            plt.imshow(current_screen, interpolation='none')
+            plt.show()
 
         if done:
             # calculate running reward
@@ -65,3 +79,4 @@ for i_episode in range(1000):
             break
 
         observation = observation_
+env.close()

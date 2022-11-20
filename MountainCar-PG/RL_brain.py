@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from torch.distributions import Bernoulli
 
+cuda = torch.device('cuda:0')
+
 class Net(nn.Module):
     def __init__(self, in_feature, out_feature):
         super(Net, self).__init__()
@@ -22,11 +24,11 @@ class Net(nn.Module):
 
     def forward(self, x):
         x = self.fc1(x)
-        # x = self.dropout1(x)
-        x = F.relu(x)
+        x = self.dropout1(x)
+        x = torch.tanh(x)
         x = self.fc2(x)
-        # x = self.dropout2(x)
-        x = F.relu(x)
+        x = self.dropout2(x)
+        x = torch.tanh(x)
         return x
 
 class PolicyGradient(object):
@@ -52,7 +54,7 @@ class PolicyGradient(object):
     def choose_action(self, observation):
         state = torch.from_numpy(observation[np.newaxis, :]).float()
         probs = self.policy_net(state)
-        prob_weights = F.softmax(probs, dim=1).detach().numpy()
+        prob_weights = F.softmax(probs, dim=1).detach().cpu().numpy()
         action = np.random.choice(range(prob_weights.shape[1]), p=prob_weights.ravel())
         return action
 
@@ -68,14 +70,13 @@ class PolicyGradient(object):
         # gradient descent 
         self.optimizer.zero_grad()
 
-        # train on episode
+        criteria = nn.NLLLoss()
+        observation_array = np.array(self.ep_obs)
+        state = torch.FloatTensor(observation_array)
+        action = torch.tensor([self.ep_as], dtype = torch.long).T.squeeze(1)
         for i in range(len(self.ep_as)):
-            criteria = nn.CrossEntropyLoss()
-            state = torch.from_numpy(self.ep_obs[i][np.newaxis, :]).float()
-            action = torch.tensor([self.ep_as[i]], dtype = torch.long)
-            reward = self.ep_rs[i]
-            probs = self.policy_net(state)
-            loss = 1.* criteria(probs, action) * discounted_ep_rs_norm[i]
+            probs = self.policy_net(state[i])
+            loss = 1.* criteria(probs, action[i]) * discounted_ep_rs_norm[i]
             loss.backward()
 
         self.optimizer.step()
@@ -84,7 +85,7 @@ class PolicyGradient(object):
         return discounted_ep_rs_norm
 
     def _discount_and_norm_rewards(self):
-        print('calculate discount rewards...')
+        # print('calculate discount rewards...')
         # discount episode rewards
         discounted_ep_rs = np.zeros_like(self.ep_rs)
         running_add = 0
