@@ -40,8 +40,8 @@ for i_episode in range(1000):
     env.render()
 
     while True:
-        action = RL.choose_action(observation)
-        observation_, reward, done, _, info = env.step(action)     # reward = -1 in all cases
+        action = RL.choose_action(observation) # policy network
+        observation_, reward, done, _, info = env.step(action) # reward = -1 in all cases
 
         RL.store_transition(observation, action, reward)
 
